@@ -1,0 +1,31 @@
+{
+  "name": "haveibeenpwned",
+  "version": "1.0.0",
+  "description": "Have I Been Pwned API client",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "pnpm build && node dist/index.js",
+    "build": "tsc -p .",
+    "prepare": "pnpm build"
+  },
+  "keywords": [
+    "haveibeenpwned",
+    "api",
+    "client",
+    "typescript"
+  ],
+  "author": "Matthew Scott",
+  "license": "GPL-3.0-or-later",
+  "packageManager": "pnpm@10.5.0",
+  "devDependencies": {
+    "@types/node": "^22.13.5",
+    "dotenv": "^16.4.7",
+    "eslint": "^9.21.0",
+    "eslint-config-love": "^118.0.0",
+    "prettier": "^3.5.2",
+    "pretty-quick": "^4.0.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.25.0"
+  }
+}
