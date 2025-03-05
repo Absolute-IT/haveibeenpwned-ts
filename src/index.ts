@@ -248,17 +248,21 @@ export default class HaveIBeenPwned {
 	async request(path: string, options: RequestOptions = {}): Promise<unknown> {
 		// Try to get from cache first
 		const cacheKey = path;
+		console.log(`Checking cache for: ${cacheKey}`);
 		const cachedData = await this.cacheManager.get(cacheKey, options.params);
 		
 		if (cachedData !== null) {
+			console.log(`Cache hit for: ${cacheKey}`);
 			return cachedData;
 		}
 		
+		console.log(`Cache miss for: ${cacheKey}, making API request`);
 		// If not in cache or expired, make the actual request
 		const response = await this.requestNoCache(path, options);
 		
 		// Cache the response if it's not null
 		if (response !== null) {
+			console.log(`Caching response for: ${cacheKey}`);
 			await this.cacheManager.set(cacheKey, options.params, response);
 		}
 		
@@ -299,6 +303,7 @@ export default class HaveIBeenPwned {
 		// Add our required headers
 		headers.set("hibp-api-key", this.apiKey);
 		headers.set("user-agent", this.userAgent);
+		headers.set("Accept", "application/json");
 		
 		// Add any custom headers from options
 		if (options.headers) {
@@ -311,12 +316,25 @@ export default class HaveIBeenPwned {
 		// Remove headers from options to avoid conflicts
 		const { headers: _, ...fetchOptions } = options;
 		
+		console.log(`Making request to: ${url.toString()}`);
+		console.log(`Headers:`, Object.fromEntries(headers.entries()));
+		
+		// Force lowercase header names for compatibility with some servers
+		const normalizedHeaders = new Headers();
+		for (const [key, value] of headers.entries()) {
+			normalizedHeaders.set(key.toLowerCase(), value);
+		}
+		
 		return fetch(url.toString(), {
 			...fetchOptions,
-			headers,
+			headers: normalizedHeaders,
 		}).then(response => {
+			console.log(`Response status: ${response.status} for ${url.toString()}`);
+			console.log(`Response headers:`, Object.fromEntries(response.headers.entries()));
+			
 			// Handle 404 responses specially - they indicate "not found" rather than an error
 			if (response.status === 404) {
+				console.log(`404 response for ${url.toString()}`);
 				return null;
 			}
 	
@@ -326,10 +344,21 @@ export default class HaveIBeenPwned {
 			// If we've reached here, the response is OK
 			if (response.status === 204) {
 				// No content
+				console.log(`204 response for ${url.toString()}`);
 				return null;
 			}
 	
-			return response.json();
+			// Improved JSON parsing to handle empty responses
+			return response.text().then(text => {
+				console.log(`Response text for ${url.toString()}:`, text ? `${text.substring(0, 100)}... (length: ${text.length})` : 'empty');
+				try {
+					return text ? JSON.parse(text) : null;
+				} catch (error) {
+					console.error(`Error parsing JSON for ${url.toString()}:`, error);
+					console.error(`Full response text:`, text);
+					return null;
+				}
+			});
 		});
 	}
 
@@ -411,9 +440,12 @@ class Breach extends EndpointBase {
 	 * @returns The breach.
 	 */
 	async name(name: string): Promise<BreachModel | null> {
+		console.log(`Requesting breach: ${name}`);
 		const response = await this.client.request(`breach/${encodeURIComponent(name)}`, {
 			method: "GET",
 		});
+		
+		console.log(`Breach response:`, response);
 
 		return response as BreachModel | null;
 	}
@@ -779,14 +811,18 @@ class Passwords extends EndpointBase {
 		// Add query parameters if provided
 		if (queryParams) {
 			Object.entries(queryParams).forEach(([key, value]) => {
-				url.searchParams.append(key, value);
+				if (value !== undefined) {
+					url.searchParams.append(key, String(value));
+				}
 			});
 		}
 		
-		// Create headers with required user agent but no API key (Passwords API doesn't use an API key)
-		const headers = new Headers({
-			"user-agent": this.client.getUserAgent()
-		});
+		// Create headers for the request
+		const headers = new Headers();
+		
+		// Set standard headers
+		headers.set("user-agent", this.client.getUserAgent());
+		headers.set("Accept", "*/*");
 		
 		// Add any custom headers
 		if (customHeaders) {
@@ -795,34 +831,30 @@ class Passwords extends EndpointBase {
 			});
 		}
 		
-		// Make the request
-		const response = await fetch(url.toString(), {
-			method: "GET",
-			headers,
-		});
-		
-		// Handle error responses
-		if (!response.ok) {
-			let errorMessage: string;
-			
-			switch (response.status) {
-				case 429:
-					errorMessage = "Too many requests - The rate limit has been exceeded";
-					break;
-				case 500:
-					errorMessage = "Internal server error";
-					break;
-				case 503:
-					errorMessage = "Service unavailable - The underlying service is not available";
-					break;
-				default:
-					errorMessage = `Unexpected status code: ${response.status} ${response.statusText}`;
-			}
-			
-			throw new Error(errorMessage);
+		// Force lowercase header names for compatibility with some servers
+		const normalizedHeaders = new Headers();
+		for (const [key, value] of headers.entries()) {
+			normalizedHeaders.set(key.toLowerCase(), value);
 		}
 		
-		// Return the response as text
+		// Log request details (debug)
+		console.log(`Making password API request to: ${url.toString()}`);
+		console.log(`Password API headers:`, Object.fromEntries(normalizedHeaders.entries()));
+		
+		// Make the request
+		const response = await fetch(url.toString(), {
+			headers: normalizedHeaders
+		});
+		
+		// Log response status (debug)
+		console.log(`Password API response status: ${response.status} for ${url.toString()}`);
+		
+		// Handle non-OK responses
+		if (!response.ok) {
+			throw new Error(`Passwords API request failed: ${response.status} ${response.statusText}`);
+		}
+		
+		// Return the response text for password-related endpoints
 		return response.text();
 	}
 }
