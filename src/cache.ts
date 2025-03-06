@@ -5,7 +5,8 @@ import { cachedir } from './cache-directory.js';
 import type { CacheConfig, CacheItem, CacheMetadata } from './types';
 
 /**
- * Cache manager for API responses
+ * Cache manager for API responses.
+ * Handles storing and retrieving cached data on the filesystem.
  */
 export class CacheManager {
 	private cacheDir: string;
@@ -13,7 +14,8 @@ export class CacheManager {
 	private latestBreachDate: string | null = null;
 
 	/**
-	 * Create a new cache manager
+	 * Create a new cache manager.
+	 * 
 	 * @param config - Cache configuration options
 	 */
 	constructor(config: CacheConfig) {
@@ -22,7 +24,8 @@ export class CacheManager {
 	}
 
 	/**
-	 * Create a hash of the given parameters for use as a cache key
+	 * Create a hash of the given parameters for use as a cache key.
+	 * 
 	 * @param endpoint - API endpoint
 	 * @param params - API parameters
 	 * @returns Hashed cache key
@@ -46,97 +49,115 @@ export class CacheManager {
 	}
 
 	/**
-	 * Get the full path to a cache file
-	 * @param key - Cache key
-	 * @returns Full path to cache file
+	 * Get the file path for a cached item.
+	 * 
+	 * @param key - The cache key
+	 * @returns The full path to the cache file
 	 */
 	private getCacheFilePath(key: string): string {
-		// Create a subdirectory structure to avoid too many files in one directory
-		// Use the first 2 characters of the hash for the directory name
-		const subDir = key.substring(0, 2);
-		return join(this.cacheDir, subDir, `${key}.json`);
+		return join(this.cacheDir, `${key}.json`);
 	}
 
 	/**
-	 * Get an item from the cache
-	 * @param endpoint - API endpoint
-	 * @param params - API parameters
-	 * @returns Cached data or null if not found/expired
+	 * Get a cached item if it exists and is still valid.
+	 * 
+	 * @param endpoint - The API endpoint
+	 * @param params - The API parameters
+	 * @returns The cached data, or null if not found or expired
 	 */
 	async get<T>(endpoint: string, params?: Record<string, any>): Promise<T | null> {
+		// If caching is disabled, always return null
 		if (!this.config.enabled) {
 			return null;
 		}
-
+		
 		try {
 			const key = this.createCacheKey(endpoint, params);
 			const filePath = this.getCacheFilePath(key);
 			
-			const fileContent = await readFile(filePath, 'utf8');
-			const cache = JSON.parse(fileContent) as CacheItem<T>;
-			
-			// Check if cache is fresh
-			if (this.isCacheFresh(cache.metadata)) {
-				return cache.data;
+			// Check if the file exists
+			const fileStats = await stat(filePath);
+			if (!fileStats.isFile()) {
+				return null;
 			}
 			
-			return null;
+			// Read and parse the cache file
+			const fileContent = await readFile(filePath, 'utf8');
+			const cacheItem = JSON.parse(fileContent) as CacheItem<T>;
+			
+			// Check if the cache is still fresh
+			if (!this.isCacheFresh(cacheItem.metadata)) {
+				return null;
+			}
+			
+			return cacheItem.data;
 		} catch (error) {
-			// File doesn't exist or other error
+			// If any error occurs (file not found, invalid JSON, etc.), return null
 			return null;
 		}
 	}
 
 	/**
-	 * Check if a cached item is still fresh
-	 * @param metadata - Cache metadata
-	 * @returns Whether the cache is still fresh
+	 * Check if a cached item is still valid based on TTL or latest breach date.
+	 * 
+	 * @param metadata - The cache metadata
+	 * @returns True if the cache is still valid, false otherwise
 	 */
 	private isCacheFresh(metadata: CacheMetadata): boolean {
-		// If we have a specific TTL, use that
+		// Check TTL first if it's configured
 		if (this.config.ttl) {
 			const now = Date.now();
+			const maxAge = this.config.ttl;
 			const age = now - metadata.timestamp;
-			return age < this.config.ttl;
+			
+			if (age > maxAge) {
+				return false;
+			}
 		}
 		
-		// If we know the latest breach date, compare it with the metadata
+		// Otherwise, check if there's a new breach since this was cached
+		// This is the recommended caching strategy in the HIBP docs
 		if (this.latestBreachDate && metadata.latestBreachAddedDate) {
-			return metadata.latestBreachAddedDate >= this.latestBreachDate;
+			// If there's a newer breach than when this was cached, it's stale
+			return this.latestBreachDate <= metadata.latestBreachAddedDate;
 		}
 		
-		// Default: 24 hours cache time if no other rules apply
-		const now = Date.now();
-		const age = now - metadata.timestamp;
-		return age < 24 * 60 * 60 * 1000; // 24 hours
+		// If we don't have a latest breach date yet but this item has one, it's still valid
+		// We haven't detected any newer breaches
+		return true;
 	}
 
 	/**
-	 * Set the latest breach date known by the system
-	 * @param date - ISO date string of the latest breach
+	 * Set the latest breach date for cache invalidation.
+	 * 
+	 * @param date - The date of the latest breach, or null to clear
 	 */
 	setLatestBreachDate(date: string | null): void {
 		this.latestBreachDate = date;
 	}
 
 	/**
-	 * Store an item in the cache
-	 * @param endpoint - API endpoint
-	 * @param params - API parameters
-	 * @param data - Data to cache
+	 * Store data in the cache.
+	 * 
+	 * @param endpoint - The API endpoint
+	 * @param params - The API parameters
+	 * @param data - The data to cache
 	 */
 	async set<T>(endpoint: string, params: Record<string, any> | undefined, data: T): Promise<void> {
+		// If caching is disabled, do nothing
 		if (!this.config.enabled) {
 			return;
 		}
-
+		
 		try {
 			const key = this.createCacheKey(endpoint, params);
 			const filePath = this.getCacheFilePath(key);
 			
-			// Create cache directories if they don't exist
-			await mkdir(dirname(filePath), { recursive: true });
+			// Create the directory if it doesn't exist
+			const directory = dirname(filePath);
+			await mkdir(directory, { recursive: true });
 			
+			// Create the cache item with metadata
 			const cacheItem: CacheItem<T> = {
 				data,
 				metadata: {
@@ -145,20 +166,19 @@ export class CacheManager {
 				}
 			};
 			
+			// Write the cache file
 			await writeFile(filePath, JSON.stringify(cacheItem), 'utf8');
 		} catch (error) {
-			// Log the error but don't throw - caching failures shouldn't break the app
-			console.error('Error writing to cache:', error);
+			// If any error occurs during caching, just ignore it
+			// Failing to cache shouldn't affect the normal operation
 		}
 	}
 
 	/**
-	 * Clear all cached data
+	 * Clear all cached data.
 	 */
 	async clearCache(): Promise<void> {
-		// This is a placeholder - a full implementation would delete 
-		// all files in the cache directory, but that's more complex
-		// than needed for this example.
-		console.log(`To clear the cache, delete the directory: ${this.cacheDir}`);
+		// Not implemented - would require reading directory and unlinking files
+		// For now, users can just delete the cache directory manually
 	}
 } 

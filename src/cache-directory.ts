@@ -2,7 +2,10 @@ import { homedir, platform } from 'os';
 import { join } from 'path';
 
 /**
- * Get the cache directory for Posix systems (Linux, etc.)
+ * Get the cache directory for Posix systems (Linux, etc.).
+ * 
+ * @param id - Application identifier
+ * @returns Path to the cache directory
  */
 function posix(id: string): string {
 	const cacheHome = process.env.XDG_CACHE_HOME || join(homedir(), '.cache');
@@ -10,14 +13,20 @@ function posix(id: string): string {
 }
 
 /**
- * Get the cache directory for macOS
+ * Get the cache directory for macOS.
+ * 
+ * @param id - Application identifier
+ * @returns Path to the cache directory
  */
 function darwin(id: string): string {
 	return join(homedir(), 'Library', 'Caches', id);
 }
 
 /**
- * Get the cache directory for Windows
+ * Get the cache directory for Windows.
+ * 
+ * @param id - Application identifier
+ * @returns Path to the cache directory
  */
 function win32(id: string): string {
 	const appData = process.env.LOCALAPPDATA || join(homedir(), 'AppData', 'Local');
@@ -25,7 +34,9 @@ function win32(id: string): string {
 }
 
 /**
- * Select the appropriate implementation based on the platform
+ * Select the appropriate implementation based on the platform.
+ * 
+ * @returns The appropriate platform-specific cache directory function
  */
 const implementation = (function () {
 	switch (platform()) {
@@ -40,17 +51,19 @@ const implementation = (function () {
 		case 'netbsd':
 		case 'openbsd':
 		case 'sunos':
+		case 'cygwin':
 			return posix;
 		default:
-			console.error(
-				`(node:${process.pid}) [cachedir] Warning: the platform "${platform()}" is not currently supported by node-cachedir, falling back to "posix". Please file an issue with your platform here: https://github.com/LinusU/node-cachedir/issues/new`
-			);
+			// Default to posix for unknown platforms
 			return posix;
 	}
 })();
 
 /**
- * Get the cache directory for the given application ID
+ * Get the platform-specific cache directory for an application.
+ * 
+ * @param id - Application identifier
+ * @returns Path to the cache directory
  */
 export function cachedir(id: string): string {
 	if (typeof id !== 'string') {

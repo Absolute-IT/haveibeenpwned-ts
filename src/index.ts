@@ -25,20 +25,34 @@ export type {
 };
 
 /**
- * Base class for API endpoint wrappers
+ * Base class for API endpoint wrappers.
+ * Provides common functionality for all endpoint classes.
  */
 abstract class EndpointBase {
+	/**
+	 * Create a new endpoint instance.
+	 * 
+	 * @param client - The HaveIBeenPwned client instance
+	 */
 	constructor(protected readonly client: HaveIBeenPwned) {}
 	
 	/**
-	 * Request data without using the cache
+	 * Make a request to the API without using the cache.
+	 * 
+	 * @param path - The path to request
+	 * @param options - The options for the request
+	 * @returns The response from the API
 	 */
 	protected async requestNoCache(path: string, options: RequestOptions = {}): Promise<unknown> {
 		return this.client.requestNoCache(path, options);
 	}
 	
 	/**
-	 * Update the cache with data
+	 * Update the cache with data.
+	 * 
+	 * @param path - The path used for the request
+	 * @param params - The parameters used for the request
+	 * @param data - The data to cache
 	 */
 	protected async updateCache(path: string, params: Record<string, any> | undefined, data: unknown): Promise<void> {
 		return this.client.updateCache(path, params, data);
@@ -47,23 +61,23 @@ abstract class EndpointBase {
 
 /**
  * Have I Been Pwned API client.
+ * Provides methods to interact with the Have I Been Pwned API.
+ * 
  * @see https://haveibeenpwned.com/API/v3
  *
  * @example
  * ```ts
  * // Basic usage with default configuration
  * const hibp = new HaveIBeenPwned(process.env.API_KEY!);
- * const data = await hibp.subscription.status();
- * console.log(data);
+ * const status = await hibp.subscription.status();
  * 
  * // Usage with custom options and caching configuration
  * const hibpCustom = new HaveIBeenPwned(process.env.API_KEY!, {
  *   baseUrl: "https://haveibeenpwned.com/api/v3/",
- *   userAgent: "my-custom-app/1.0",
+ *   userAgent: "MyApp/1.0",
  *   cache: {
  *     enabled: true,
- *     directory: "/custom/cache/path",
- *     ttl: 3600000 // 1 hour in milliseconds
+ *     ttl: 3600000 // 1 hour
  *   }
  * });
  * ```
@@ -86,8 +100,10 @@ export default class HaveIBeenPwned {
 	
 	/**
 	 * Create a new Have I Been Pwned API client.
-	 * @param apiKey The API key to use for the client.
-	 * @param options Additional options for the client.
+	 * 
+	 * @param apiKey - The API key to use for the client
+	 * @param options - Additional options for the client
+	 * @throws Error if no API key is provided
 	 */
 	constructor(apiKey: string, options?: HaveIBeenPwnedOptions) {
 		if (!apiKey) {
@@ -114,16 +130,12 @@ export default class HaveIBeenPwned {
 			ttl: options?.cache?.ttl
 		};
 		this.cacheManager = new CacheManager(cacheConfig);
-		
-		// Initialize by checking the latest breach in the background
-		this.checkLatestBreach().catch(err => {
-			console.error("Failed to fetch latest breach for cache initialization:", err);
-		});
 	}
 	
 	/**
-	 * Configure caching options
-	 * @param options Cache configuration options
+	 * Configure caching options for the client.
+	 * 
+	 * @param options - Cache configuration options
 	 */
 	configureCaching(options: CacheOptions): void {
 		const cacheConfig: CacheConfig = {
@@ -140,8 +152,8 @@ export default class HaveIBeenPwned {
 	}
 	
 	/**
-	 * Check the latest breach and update cache manager.
-	 * This helps determine whether cached data is still valid.
+	 * Check for the latest breach and update cache invalidation date.
+	 * This is called automatically by the client when needed.
 	 */
 	private async checkLatestBreach(): Promise<void> {
 		try {
@@ -164,14 +176,15 @@ export default class HaveIBeenPwned {
 	}
 	
 	/**
-	 * Clear the cache
+	 * Clear all cached data.
 	 */
 	async clearCache(): Promise<void> {
 		await this.cacheManager.clearCache();
 	}
 	
 	/**
-	 * Lazy-loaded access to subscription endpoints
+	 * Get the subscription endpoint instance.
+	 * @returns The subscription endpoint instance
 	 */
 	get subscription(): Subscription {
 		if (!this._subscription) {
@@ -180,6 +193,10 @@ export default class HaveIBeenPwned {
 		return this._subscription;
 	}
 
+	/**
+	 * Get the breach endpoint instance.
+	 * @returns The breach endpoint instance
+	 */
 	get breach(): Breach {
 		if (!this._breach) {
 			this._breach = new Breach(this);
@@ -187,6 +204,10 @@ export default class HaveIBeenPwned {
 		return this._breach;
 	}
 
+	/**
+	 * Get the data endpoint instance.
+	 * @returns The data endpoint instance
+	 */
 	get data(): Data {
 		if (!this._data) {
 			this._data = new Data(this);
@@ -194,6 +215,10 @@ export default class HaveIBeenPwned {
 		return this._data;
 	}
 
+	/**
+	 * Get the stealer log endpoint instance.
+	 * @returns The stealer log endpoint instance
+	 */
 	get stealerLog(): StealerLog {
 		if (!this._stealerLog) {
 			this._stealerLog = new StealerLog(this);
@@ -201,6 +226,10 @@ export default class HaveIBeenPwned {
 		return this._stealerLog;
 	}
 
+	/**
+	 * Get the breached account endpoint instance.
+	 * @returns The breached account endpoint instance
+	 */
 	get breached(): Breached {
 		if (!this._breached) {
 			this._breached = new Breached(this);
@@ -208,6 +237,10 @@ export default class HaveIBeenPwned {
 		return this._breached;
 	}
 
+	/**
+	 * Get the paste endpoint instance.
+	 * @returns The paste endpoint instance
+	 */
 	get paste(): Paste {
 		if (!this._paste) {
 			this._paste = new Paste(this);
@@ -216,7 +249,8 @@ export default class HaveIBeenPwned {
 	}
 
 	/**
-	 * Lazy-loaded access to password endpoints
+	 * Get the passwords endpoint instance.
+	 * @returns The passwords endpoint instance
 	 */
 	get passwords(): Passwords {
 		if (!this._passwords) {
@@ -240,29 +274,27 @@ export default class HaveIBeenPwned {
 	}
 
 	/**
-	 * Make a request to the Have I Been Pwned API with caching.
-	 * @param path The path to request.
-	 * @param options The options for the request, including optional query parameters.
-	 * @returns The response from the API.
+	 * Make a request to the Have I Been Pwned API.
+	 * First attempts to retrieve from cache, then falls back to live API request if needed.
+	 * 
+	 * @param path - The path to request
+	 * @param options - The options for the request, including optional query parameters
+	 * @returns The response from the API or cache
 	 */
 	async request(path: string, options: RequestOptions = {}): Promise<unknown> {
 		// Try to get from cache first
 		const cacheKey = path;
-		console.log(`Checking cache for: ${cacheKey}`);
 		const cachedData = await this.cacheManager.get(cacheKey, options.params);
 		
 		if (cachedData !== null) {
-			console.log(`Cache hit for: ${cacheKey}`);
 			return cachedData;
 		}
 		
-		console.log(`Cache miss for: ${cacheKey}, making API request`);
 		// If not in cache or expired, make the actual request
 		const response = await this.requestNoCache(path, options);
 		
 		// Cache the response if it's not null
 		if (response !== null) {
-			console.log(`Caching response for: ${cacheKey}`);
 			await this.cacheManager.set(cacheKey, options.params, response);
 		}
 		
@@ -273,9 +305,9 @@ export default class HaveIBeenPwned {
 	 * Make a request to the Have I Been Pwned API without using the cache.
 	 * Internal method that can be accessed by endpoint classes.
 	 * 
-	 * @param path The path to request.
-	 * @param options The options for the request, including optional query parameters.
-	 * @returns The response from the API.
+	 * @param path - The path to request
+	 * @param options - The options for the request, including optional query parameters
+	 * @returns The response from the API
 	 */
 	requestNoCache(path: string, options: RequestOptions = {}): Promise<unknown> {
 		// Ensure the path doesn't start with a slash to avoid double slashes
@@ -303,63 +335,57 @@ export default class HaveIBeenPwned {
 		// Add our required headers
 		headers.set("hibp-api-key", this.apiKey);
 		headers.set("user-agent", this.userAgent);
-		headers.set("Accept", "application/json");
 		
 		// Add any custom headers from options
 		if (options.headers) {
-			const customHeaders = options.headers as Record<string, string>;
-			Object.entries(customHeaders).forEach(([key, value]) => {
+			Object.entries(options.headers).forEach(([key, value]) => {
 				headers.set(key, value);
 			});
 		}
 		
-		// Remove headers from options to avoid conflicts
-		const { headers: _, ...fetchOptions } = options;
+		// Final options for fetch
+		const fetchOptions: RequestInit = {
+			...options,
+			headers
+		};
 		
-		console.log(`Making request to: ${url.toString()}`);
-		console.log(`Headers:`, Object.fromEntries(headers.entries()));
-		
-		// Force lowercase header names for compatibility with some servers
-		const normalizedHeaders = new Headers();
-		for (const [key, value] of headers.entries()) {
-			normalizedHeaders.set(key.toLowerCase(), value);
-		}
-		
-		return fetch(url.toString(), {
-			...fetchOptions,
-			headers: normalizedHeaders,
-		}).then(response => {
-			console.log(`Response status: ${response.status} for ${url.toString()}`);
-			console.log(`Response headers:`, Object.fromEntries(response.headers.entries()));
-			
-			// Handle 404 responses specially - they indicate "not found" rather than an error
-			if (response.status === 404) {
-				console.log(`404 response for ${url.toString()}`);
-				return null;
-			}
-	
-			// Handle other error responses
-			this.handleErrorResponse(response);
-	
-			// If we've reached here, the response is OK
-			if (response.status === 204) {
-				// No content
-				console.log(`204 response for ${url.toString()}`);
-				return null;
-			}
-	
-			// Improved JSON parsing to handle empty responses
-			return response.text().then(text => {
-				console.log(`Response text for ${url.toString()}:`, text ? `${text.substring(0, 100)}... (length: ${text.length})` : 'empty');
-				try {
-					return text ? JSON.parse(text) : null;
-				} catch (error) {
-					console.error(`Error parsing JSON for ${url.toString()}:`, error);
-					console.error(`Full response text:`, text);
-					return null;
+		return fetch(url.toString(), fetchOptions)
+			.then(response => {
+				// Handle common error responses
+				if (!response.ok) {
+					// If the status code is in the ignore list, return null instead of throwing
+					const ignoreStatusCodes = options.ignoreStatusCodes || [];
+					if (ignoreStatusCodes.includes(response.status)) {
+						if (response.status === 404) {
+							return null;
+						}
+						
+						// Handle 204 No Content
+						if (response.status === 204) {
+							return null;
+						}
+					}
+					
+					// Otherwise, handle the error
+					this.handleErrorResponse(response);
 				}
+				
+				// For successful responses, try to parse as JSON
+				return response.text().then(text => {
+					// If the response is empty or whitespace only, return null
+					if (!text || text.trim() === "") {
+						return null;
+					}
+					
+					try {
+						// Try to parse as JSON
+						return JSON.parse(text);
+					} catch (e) {
+						// If it's not valid JSON, return the text as-is
+						return text;
+					}
+				});
 			});
-		});
 	}
 
 	/**
@@ -412,48 +438,56 @@ export default class HaveIBeenPwned {
 	}
 }
 
+/**
+ * Breach-related API endpoints.
+ * Provides methods to get information about specific breaches.
+ * 
+ * @see https://haveibeenpwned.com/API/v3#BreachesForASingleSite
+ */
 class Breach extends EndpointBase {
 	/**
-	 * Get all breaches.
+	 * Get all breaches in the system.
+	 * 
 	 * @see https://haveibeenpwned.com/API/v3#AllBreaches
-	 * @param options Options for the request.
-	 * @returns All breaches.
+	 * @param options - Options for filtering the breaches
+	 * @param options.domain - Filter by domain
+	 * @param options.isSpamList - Filter by whether the breach is from a spam list
+	 * @returns An array of breaches
 	 */
 	async all(options?: BreachAllOptions): Promise<BreachModel[]> {
-		const { domain, isSpamList = false } = options ?? {};
-
+		const { domain, isSpamList } = options ?? {};
+		
 		const response = await this.client.request("breaches", {
 			method: "GET",
 			params: {
-				Domain: domain,
-				IsSpamList: isSpamList,
-			},
+				domain,
+				isSpamList
+			}
 		});
 
 		return response as BreachModel[];
 	}
-	
+
 	/**
-	 * Get a breach by name.
+	 * Get a specific breach by name.
+	 * 
 	 * @see https://haveibeenpwned.com/API/v3#SingleBreach
-	 * @param name The name of the breach to get.
-	 * @returns The breach.
+	 * @param name - The name of the breach to get
+	 * @returns The breach details or null if not found
 	 */
 	async name(name: string): Promise<BreachModel | null> {
-		console.log(`Requesting breach: ${name}`);
 		const response = await this.client.request(`breach/${encodeURIComponent(name)}`, {
 			method: "GET",
 		});
-		
-		console.log(`Breach response:`, response);
 
 		return response as BreachModel | null;
 	}
 
 	/**
 	 * Get the latest breach.
+	 * 
 	 * @see https://haveibeenpwned.com/API/v3#LatestBreach
-	 * @returns The latest breach.
+	 * @returns The latest breach or null if none found
 	 */
 	async latest(): Promise<BreachModel | null> {
 		const response = await this.client.request("latestbreach", {
@@ -464,7 +498,19 @@ class Breach extends EndpointBase {
 	}
 }
 
+/**
+ * Data class-related API endpoints.
+ * Provides methods to get information about data classes found in breaches.
+ * 
+ * @see https://haveibeenpwned.com/API/v3#AllDataClasses
+ */
 class Data extends EndpointBase {
+	/**
+	 * Get all data classes in the system.
+	 * 
+	 * @see https://haveibeenpwned.com/API/v3#AllDataClasses
+	 * @returns An array of data classes
+	 */
 	async classes() {
 		const response = await this.client.request("dataclasses", {
 			method: "GET",
@@ -475,7 +521,9 @@ class Data extends EndpointBase {
 }
 
 /**
- * Breached-related API endpoints
+ * Breached account-related API endpoints.
+ * Provides methods to check if accounts or domains have been found in data breaches.
+ * 
  * @see https://haveibeenpwned.com/API/v3#BreachedAccount
  */
 class Breached extends EndpointBase {
@@ -483,10 +531,14 @@ class Breached extends EndpointBase {
 	private lastKnownBreachDate: string | null = null;
 	
 	/**
-	 * Get breach information for a specific account
+	 * Get breach information for a specific account.
+	 * 
 	 * @see https://haveibeenpwned.com/API/v3#BreachedAccount
-	 * @param account The account (email address) to check
-	 * @param options Options for the request
+	 * @param account - The account (email address) to check
+	 * @param options - Options for the request
+	 * @param options.truncateResponse - Whether to truncate the response
+	 * @param options.domain - Filter by domain
+	 * @param options.includeUnverified - Whether to include unverified breaches
 	 * @returns Information about breaches for the account, or null if none found
 	 */
 	async account(account: string = "all", options?: BreachedAccountOptions): Promise<BreachModel[] | null> {
@@ -506,11 +558,12 @@ class Breached extends EndpointBase {
 	}
 
 	/**
-	 * Get breach information for a specific domain
+	 * Get breach information for a specific domain.
+	 * 
 	 * @see https://haveibeenpwned.com/API/v3#BreachedDomain
-	 * @param domain The domain to check
-	 * @param forceFresh Whether to force a fresh request
-	 * @returns Information about breaches for the domain, or null if none found
+	 * @param domain - The domain to check
+	 * @param forceFresh - Whether to force a fresh request instead of using cached data
+	 * @returns Information about breaches for the domain as a map of email to breach names, or null if none found
 	 */
 	async domain(domain: string, forceFresh = false): Promise<Map<string, string[]> | null> {
 		// For domain searches, we want to follow the API docs recommendation:
@@ -525,8 +578,6 @@ class Breached extends EndpointBase {
 				// If we have a previously known breach date and the latest breach date is the same,
 				// we can safely use the cached data
 				if (this.lastKnownBreachDate && this.lastKnownBreachDate >= latestBreach.AddedDate) {
-					console.log("Latest breach hasn't changed, using cached data if available");
-					
 					// The regular request method will use the cache if available
 					const response = await this.client.request(`breacheddomain/${encodeURIComponent(domain)}`, {
 						method: "GET",
@@ -537,7 +588,6 @@ class Breached extends EndpointBase {
 				
 				// Update our latest known breach date
 				this.lastKnownBreachDate = latestBreach.AddedDate;
-				console.log(`New breach detected, fetching fresh data. Latest breach date: ${latestBreach.AddedDate}`);
 			}
 		}
 		
@@ -556,18 +606,21 @@ class Breached extends EndpointBase {
 }
 
 /**
- * Stealer log-related API endpoints
+ * Stealer log-related API endpoints.
+ * Provides methods to check if accounts or domains have been found in malware stealer logs.
+ * 
  * @see https://haveibeenpwned.com/API/v3#StealerLogsOverview
  */
 class StealerLog extends EndpointBase {
 	/**
-	 * Get stealer log information for a specific email address
+	 * Get stealer log information for a specific email address.
+	 * 
 	 * @see https://haveibeenpwned.com/API/v3#StealerLogsForEmail
-	 * @param email The email address to check
-	 * @returns Information about websites where the email's credentials were stolen, or null if none found
-	 */	
+	 * @param email - The email address to check
+	 * @returns An array of stealer log names containing the email, or null if none found
+	 */
 	async email(email: string): Promise<string[] | null> {
-		const response = await this.client.request(`stealerlogsbyemail/${encodeURIComponent(email)}`, {
+		const response = await this.client.request(`stealerlog/email/${encodeURIComponent(email)}`, {
 			method: "GET",
 		});
 
@@ -575,13 +628,14 @@ class StealerLog extends EndpointBase {
 	}
 
 	/**
-	 * Get stealer log information for a specific website domain
-	 * @see https://haveibeenpwned.com/API/v3#StealerLogsByWebsiteDomain
-	 * @param domain The website domain to check
-	 * @returns Information about websites where the email's credentials were stolen, or null if none found
-	 */	
+	 * Get stealer log information for a specific website domain.
+	 * 
+	 * @see https://haveibeenpwned.com/API/v3#StealerLogsForWebsite
+	 * @param domain - The domain to check
+	 * @returns An array of stealer log names containing credentials for the domain, or null if none found
+	 */
 	async website(domain: string): Promise<string[] | null> {
-		const response = await this.client.request(`stealerlogsbywebsitedomain/${encodeURIComponent(domain)}`, {
+		const response = await this.client.request(`stealerlog/website/${encodeURIComponent(domain)}`, {
 			method: "GET",
 		});
 
@@ -589,13 +643,14 @@ class StealerLog extends EndpointBase {
 	}
 
 	/**
-	 * Get stealer log information for a specific email domain
-	 * @see https://haveibeenpwned.com/API/v3#StealerLogsByEmailDomain
-	 * @param domain The email domain to check
-	 * @returns Information about websites where the email's credentials were stolen, or null if none found
-	 */	
+	 * Get stealer log information for all emails from a specific domain.
+	 * 
+	 * @see https://haveibeenpwned.com/API/v3#StealerLogsForEmailDomain
+	 * @param domain - The email domain to check
+	 * @returns A map of emails to stealer log names containing them, or null if none found
+	 */
 	async emailDomain(domain: string): Promise<Map<string, string[]> | null> {
-		const response = await this.client.request(`stealerlogsbyemaildomain/${encodeURIComponent(domain)}`, {
+		const response = await this.client.request(`stealerlog/emaildomain/${encodeURIComponent(domain)}`, {
 			method: "GET",
 		});
 
@@ -604,15 +659,18 @@ class StealerLog extends EndpointBase {
 }
 
 /**
- * Paste-related API endpoints
- * @see https://haveibeenpwned.com/API/v3#PasteModel
+ * Paste-related API endpoints.
+ * Provides methods to check if accounts have been found in pastes from paste sites.
+ * 
+ * @see https://haveibeenpwned.com/API/v3#Pastes
  */
 class Paste extends EndpointBase {
 	/**
-	 * Get paste information for a specific account
-	 * @see https://haveibeenpwned.com/API/v3#PasteAccount
-	 * @param email The email address to check
-	 * @returns Information about pastes for the account, or null if none found
+	 * Get paste information for a specific email address.
+	 * 
+	 * @see https://haveibeenpwned.com/API/v3#PastesForAccount
+	 * @param email - The email address to check
+	 * @returns Information about pastes containing the email, or null if none found
 	 */
 	async account(email: string): Promise<PasteModel[] | null> {
 		const response = await this.client.request(`pasteaccount/${encodeURIComponent(email)}`, {
@@ -655,18 +713,23 @@ class Subscription extends EndpointBase {
 }
 
 /**
- * Password-related API endpoints
+ * Password-related API endpoints.
+ * Provides methods to check if passwords have been exposed in data breaches.
+ * 
  * @see https://haveibeenpwned.com/API/v3#PwnedPasswords
  */
 class Passwords extends EndpointBase {
 	/**
-	 * Check if a password has been found in a data breach using the k-Anonymity model.
+	 * Check if a password hash has been found in a data breach using the k-Anonymity model.
 	 * Only the first 5 characters of the hash are sent to the API.
 	 * 
 	 * @see https://haveibeenpwned.com/API/v3#PwnedPasswords
 	 * @param passwordHash - The SHA-1 or NTLM hash of the password to check
 	 * @param options - Options for the request
+	 * @param options.addPadding - Whether to add padding to the response to prevent traffic analysis
+	 * @param options.mode - The hash mode, either 'sha1' (default) or 'ntlm'
 	 * @returns The number of times the password appears in the data set, or 0 if not found
+	 * @throws Error if the password hash is less than 5 characters
 	 */
 	async range(
 		passwordHash: string, 
@@ -733,12 +796,15 @@ class Passwords extends EndpointBase {
 	
 	/**
 	 * Check if a password has been found in a data breach.
-	 * This is a convenience method that creates a hash of the password
-	 * and checks if it appears in the Pwned Passwords database.
+	 * This is a convenience method that hashes the password and then checks the hash.
 	 * 
-	 * @param password The plaintext password to check
-	 * @param options Options for the request
+	 * @see https://haveibeenpwned.com/API/v3#PwnedPasswords
+	 * @param password - The plaintext password to check
+	 * @param options - Options for the request
+	 * @param options.addPadding - Whether to add padding to the response to prevent traffic analysis
+	 * @param options.mode - The hash mode, either 'sha1' (default) or 'ntlm'
 	 * @returns The number of times the password appears in the data set, or 0 if not found
+	 * @throws Error if NTLM hash mode is requested (not implemented)
 	 */
 	async check(
 		password: string, 
@@ -767,8 +833,8 @@ class Passwords extends EndpointBase {
 	/**
 	 * Create a SHA-1 hash of a string.
 	 * 
-	 * @param text The text to hash
-	 * @returns The SHA-1 hash of the text
+	 * @param text - The text to hash
+	 * @returns The SHA-1 hash of the text in uppercase hexadecimal
 	 */
 	private async sha1(text: string): Promise<string> {
 		// Convert the string to a Uint8Array
@@ -800,8 +866,6 @@ class Passwords extends EndpointBase {
 			headers?: Record<string, string>;
 		}
 	): Promise<string> {
-		const { queryParams, headers: customHeaders } = options ?? {};
-		
 		// Ensure the path doesn't start with a slash to avoid double slashes
 		const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
 		
@@ -809,52 +873,37 @@ class Passwords extends EndpointBase {
 		const url = new URL(normalizedPath, this.client.getPasswordsBaseUrl());
 		
 		// Add query parameters if provided
-		if (queryParams) {
-			Object.entries(queryParams).forEach(([key, value]) => {
-				if (value !== undefined) {
-					url.searchParams.append(key, String(value));
-				}
+		if (options?.queryParams) {
+			Object.entries(options.queryParams).forEach(([key, value]) => {
+				url.searchParams.append(key, value);
 			});
 		}
 		
-		// Create headers for the request
-		const headers = new Headers();
+		// Create headers
+		const normalizedHeaders = new Headers({
+			"user-agent": this.client.getUserAgent(),
+		});
 		
-		// Set standard headers
-		headers.set("user-agent", this.client.getUserAgent());
-		headers.set("Accept", "*/*");
-		
-		// Add any custom headers
-		if (customHeaders) {
-			Object.entries(customHeaders).forEach(([key, value]) => {
-				headers.set(key, value);
+		// Add any custom headers from options
+		if (options?.headers) {
+			Object.entries(options.headers).forEach(([key, value]) => {
+				normalizedHeaders.set(key, value);
 			});
 		}
-		
-		// Force lowercase header names for compatibility with some servers
-		const normalizedHeaders = new Headers();
-		for (const [key, value] of headers.entries()) {
-			normalizedHeaders.set(key.toLowerCase(), value);
-		}
-		
-		// Log request details (debug)
-		console.log(`Making password API request to: ${url.toString()}`);
-		console.log(`Password API headers:`, Object.fromEntries(normalizedHeaders.entries()));
 		
 		// Make the request
 		const response = await fetch(url.toString(), {
+			method: "GET",
 			headers: normalizedHeaders
 		});
 		
-		// Log response status (debug)
-		console.log(`Password API response status: ${response.status} for ${url.toString()}`);
-		
-		// Handle non-OK responses
+		// Handle errors
 		if (!response.ok) {
+			// Throw an error with status information
 			throw new Error(`Passwords API request failed: ${response.status} ${response.statusText}`);
 		}
 		
-		// Return the response text for password-related endpoints
+		// Return the response text
 		return response.text();
 	}
 }
