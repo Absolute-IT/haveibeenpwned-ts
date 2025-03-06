@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1741151359592" clover="3.2.0">
-  <project timestamp="1741151359592" name="All files">
+<coverage generated="1741301459947" clover="3.2.0">
+  <project timestamp="1741301459947" name="All files">
     <metrics statements="283" coveredstatements="223" conditionals="118" coveredconditionals="82" methods="58" coveredmethods="51" elements="459" coveredelements="356" complexity="0" loc="283" ncloc="283" packages="1" files="4" classes="4"/>
     <file name="cache-directory.ts" path="/Users/matthewscott/Programming/NodeJS/haveibeenpwned/src/cache-directory.ts">
       <metrics statements="19" coveredstatements="19" conditionals="17" coveredconditionals="14" methods="5" coveredmethods="5"/>

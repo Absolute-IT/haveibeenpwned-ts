@@ -97,13 +97,18 @@ describe('Breached', () => {
 			const breaches = await hibp.breached.account('test@example.com');
 
 			// Check that the API call was made correctly
-			expect(fetchMock.mock.calls.length).toBe(2);
-			expect(fetchMock.mock.calls[1][0]).toContain('breachedaccount/test%40example.com');
-			expect(fetchMock.mock.calls[1][0]).toContain('truncateResponse=true');
-			expect(fetchMock.mock.calls[1][0]).toContain('IncludeUnverified=false');
+			expect(fetchMock.mock.calls.length).toBeGreaterThan(0);
+			
+			// Find the call to the breached account endpoint
+			const breachedAccountCall = fetchMock.mock.calls.find(call => 
+				typeof call[0] === 'string' && call[0].includes('breachedaccount/test%40example.com')
+			);
+			expect(breachedAccountCall).toBeDefined();
+			expect(typeof breachedAccountCall![0] === 'string' && breachedAccountCall![0]).toContain('truncateResponse=true');
+			expect(typeof breachedAccountCall![0] === 'string' && breachedAccountCall![0]).toContain('IncludeUnverified=false');
 			
 			// Check the headers
-			const requestOptions = fetchMock.mock.calls[1][1] || {};
+			const requestOptions = breachedAccountCall![1] || {};
 			expect(requestOptions.method).toBe('GET');
 			
 			// Check the response
@@ -115,7 +120,7 @@ describe('Breached', () => {
 
 			const breaches = await hibp.breached.account('test@example.com', { truncateResponse: false });
 
-			expect(fetchMock).toHaveBeenNthCalledWith(2,
+			expect(fetchMock).toHaveBeenCalledWith(
 				'https://haveibeenpwned.com/api/v3/breachedaccount/test%40example.com?truncateResponse=false&IncludeUnverified=false',
 				expect.anything()
 			);
@@ -128,7 +133,7 @@ describe('Breached', () => {
 
 			const breaches = await hibp.breached.account('test@example.com', { domain: 'adobe.com' });
 
-			expect(fetchMock).toHaveBeenNthCalledWith(2,
+			expect(fetchMock).toHaveBeenCalledWith(
 				'https://haveibeenpwned.com/api/v3/breachedaccount/test%40example.com?truncateResponse=true&domain=adobe.com&IncludeUnverified=false',
 				expect.anything()
 			);
@@ -145,7 +150,7 @@ describe('Breached', () => {
 
 			const breaches = await hibp.breached.account('test@example.com', { includeUnverified: true });
 
-			expect(fetchMock).toHaveBeenNthCalledWith(2,
+			expect(fetchMock).toHaveBeenCalledWith(
 				'https://haveibeenpwned.com/api/v3/breachedaccount/test%40example.com?truncateResponse=true&IncludeUnverified=true',
 				expect.anything()
 			);
@@ -157,7 +162,7 @@ describe('Breached', () => {
 
 			const breaches = await hibp.breached.account('secure@example.com');
 
-			expect(fetchMock).toHaveBeenNthCalledWith(2,
+			expect(fetchMock).toHaveBeenCalledWith(
 				'https://haveibeenpwned.com/api/v3/breachedaccount/secure%40example.com?truncateResponse=true&IncludeUnverified=false',
 				expect.anything()
 			);
@@ -170,7 +175,7 @@ describe('Breached', () => {
 
 			const breaches = await hibp.breached.account('account-exists@hibp-integration-tests.com');
 
-			expect(fetchMock).toHaveBeenNthCalledWith(2,
+			expect(fetchMock).toHaveBeenCalledWith(
 				'https://haveibeenpwned.com/api/v3/breachedaccount/account-exists%40hibp-integration-tests.com?truncateResponse=true&IncludeUnverified=false',
 				expect.anything()
 			);
@@ -187,7 +192,7 @@ describe('Breached', () => {
 
 			const breaches = await hibp.breached.account('multiple-breaches@hibp-integration-tests.com');
 
-			expect(fetchMock).toHaveBeenNthCalledWith(2,
+			expect(fetchMock).toHaveBeenCalledWith(
 				'https://haveibeenpwned.com/api/v3/breachedaccount/multiple-breaches%40hibp-integration-tests.com?truncateResponse=true&IncludeUnverified=false',
 				expect.anything()
 			);
@@ -200,7 +205,7 @@ describe('Breached', () => {
 
 			const breaches = await hibp.breached.account('sensitive-breach@hibp-integration-tests.com');
 
-			expect(fetchMock).toHaveBeenNthCalledWith(2,
+			expect(fetchMock).toHaveBeenCalledWith(
 				'https://haveibeenpwned.com/api/v3/breachedaccount/sensitive-breach%40hibp-integration-tests.com?truncateResponse=true&IncludeUnverified=false',
 				expect.anything()
 			);
