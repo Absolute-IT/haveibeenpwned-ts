@@ -353,17 +353,22 @@ export default class HaveIBeenPwned {
 			.then(response => {
 				// Handle common error responses
 				if (!response.ok) {
-					// If the status code is in the ignore list, return null instead of throwing
+					// In the Have I Been Pwned API, 404 always indicates "not found" (empty result set)
+					// So we should return null rather than throwing an error
+					if (response.status === 404) {
+						return null;
+					}
+					
+					// Handle other non-error status codes if they're in the ignore list
 					const ignoreStatusCodes = options.ignoreStatusCodes || [];
 					if (ignoreStatusCodes.includes(response.status)) {
-						if (response.status === 404) {
-							return null;
-						}
-						
 						// Handle 204 No Content
 						if (response.status === 204) {
 							return null;
 						}
+						
+						// Handle other ignored status codes
+						return null;
 					}
 					
 					// Otherwise, handle the error
@@ -899,7 +904,12 @@ class Passwords extends EndpointBase {
 		
 		// Handle errors
 		if (!response.ok) {
-			// Throw an error with status information
+			// In the Have I Been Pwned API, 404 always indicates "not found" (empty result set)
+			if (response.status === 404) {
+				return "";
+			}
+			
+			// Throw an error with status information for other error codes
 			throw new Error(`Passwords API request failed: ${response.status} ${response.statusText}`);
 		}
 		

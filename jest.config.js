@@ -12,7 +12,6 @@ export default {
 	},
 	extensionsToTreatAsEsm: ['.ts'],
 	moduleFileExtensions: ['ts', 'js', 'json', 'node'],
-	setupFiles: ['<rootDir>/test/setup.js'],
 	collectCoverage: true,
 	collectCoverageFrom: ['src/**/*.ts'],
 	coveragePathIgnorePatterns: ['/node_modules/'],
