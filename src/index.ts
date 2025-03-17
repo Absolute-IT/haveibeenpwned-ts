@@ -625,7 +625,7 @@ class StealerLog extends EndpointBase {
 	 * @returns An array of stealer log names containing the email, or null if none found
 	 */
 	async email(email: string): Promise<string[] | null> {
-		const response = await this.client.request(`stealerlog/email/${encodeURIComponent(email)}`, {
+		const response = await this.client.request(`stealerlogsbyemail/${encodeURIComponent(email)}`, {
 			method: "GET",
 		});
 
@@ -640,7 +640,7 @@ class StealerLog extends EndpointBase {
 	 * @returns An array of stealer log names containing credentials for the domain, or null if none found
 	 */
 	async website(domain: string): Promise<string[] | null> {
-		const response = await this.client.request(`stealerlog/website/${encodeURIComponent(domain)}`, {
+		const response = await this.client.request(`stealerlogsbywebsitedomain/${encodeURIComponent(domain)}`, {
 			method: "GET",
 		});
 
@@ -655,7 +655,7 @@ class StealerLog extends EndpointBase {
 	 * @returns A map of emails to stealer log names containing them, or null if none found
 	 */
 	async emailDomain(domain: string): Promise<Map<string, string[]> | null> {
-		const response = await this.client.request(`stealerlog/emaildomain/${encodeURIComponent(domain)}`, {
+		const response = await this.client.request(`stealerlogsbyemaildomain/${encodeURIComponent(domain)}`, {
 			method: "GET",
 		});
 
